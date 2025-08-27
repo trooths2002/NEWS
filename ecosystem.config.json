@@ -1,0 +1,110 @@
+{
+  "env": {
+    "NODE_ENV": "production",
+    "MCP_CONFIG": "./production-config.json"
+  },
+  "apps": [
+    {
+      "name": "mcp-server",
+      "script": "mcp-server.js",
+      "args": "--config mcp.config.json"
+    },
+    {
+      "name": "enhanced-mcp-server",
+      "script": "enhanced-mcp-server.js",
+      "args": "--config multi-server-mcp-config.json"
+    },
+    {
+      "name": "geopolitical-intelligence-server",
+      "script": "geopolitical-intelligence-server.js"
+    },
+    {
+      "name": "mcp-orchestrator",
+      "script": "mcp-orchestrator.js"
+    },
+    {
+      "name": "multi-server-mcp-proxy",
+      "script": "multi-server-mcp-proxy.js"
+    },
+    {
+      "name": "filesystem-mcp",
+      "script": "filesystem-mcp.js"
+    },
+    {
+      "name": "web-scraping-mcp",
+      "script": "web-scraping-mcp.js"
+    },
+    {
+      "name": "sqlite-mcp",
+      "script": "sqlite-mcp.js"
+    },
+    {
+      "name": "fetch-mcp",
+      "script": "fetch-mcp.js"
+    },
+    {
+      "name": "brave-search-mcp",
+      "script": "brave-search-mcp.js"
+    },
+    {
+      "name": "github-mcp",
+      "script": "github-mcp.js"
+    },
+    {
+      "name": "postgres-mcp",
+      "script": "postgres-mcp.js"
+    },
+    {
+      "name": "memory-mcp",
+      "script": "memory-mcp.js"
+    },
+    {
+      "name": "news-aggregator-mcp",
+      "script": "news-aggregator-mcp.js"
+    },
+    {
+      "name": "image-analysis-mcp",
+      "script": "image-analysis-mcp.js"
+    },
+    {
+      "name": "sentiment-analysis-mcp",
+      "script": "sentiment-analysis-mcp.js"
+    },
+    {
+      "name": "prediction-mcp",
+      "script": "prediction-mcp.js"
+    },
+    {
+      "name": "slack-mcp",
+      "script": "slack-mcp.js"
+    },
+    {
+      "name": "email-mcp",
+      "script": "email-mcp.js"
+    },
+    {
+      "name": "calendar-mcp",
+      "script": "calendar-mcp.js"
+    },
+    {
+      "name": "analytics-mcp",
+      "script": "analytics-mcp.js"
+    },
+    {
+      "name": "subscription-management-mcp",
+      "script": "subscription-management-mcp.js"
+    },
+    {
+      "name": "client-portal-mcp",
+      "script": "client-portal-mcp.js"
+    },
+    {
+      "name": "report-generation-mcp",
+      "script": "report-generation-mcp.js"
+    },
+    {
+      "name": "pricing-optimization-mcp",
+      "script": "pricing-optimization-mcp.js"
+    }
+  ]
+}
