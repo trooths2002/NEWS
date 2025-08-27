@@ -1,0 +1,314 @@
+{
+  "version": "2.0.0",
+  "environment": "production",
+  "description": "Production-hardened MCP server configuration for enterprise news intelligence automation",
+  
+  "mcpServers": {
+    "news-fetcher": {
+      "command": "node",
+      "args": ["mcp-server-stdio.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "LOG_LEVEL": "info",
+        "TIMEOUT": "30000"
+      },
+      "restart": true,
+      "maxRestarts": 3,
+      "healthCheck": {
+        "enabled": true,
+        "url": "http://localhost:3006/health",
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3
+      }
+    },
+    
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./"],
+      "env": {
+        "ALLOWED_DIRS": "./,./workflows,./images,./archives,./logs",
+        "SECURITY_MODE": "strict"
+      },
+      "restart": true,
+      "maxRestarts": 3,
+      "security": {
+        "allowedPaths": [
+          "./workflows",
+          "./images", 
+          "./archives",
+          "./logs",
+          "./temp",
+          "./backups"
+        ],
+        "deniedPaths": [
+          "../",
+          "/",
+          "C:\\Windows",
+          "C:\\Program Files"
+        ],
+        "pathValidation": true
+      }
+    },
+    
+    "sqlite": {
+      "command": "npx", 
+      "args": ["-y", "@modelcontextprotocol/server-sqlite", "news-database.db"],
+      "env": {
+        "SQLITE_MODE": "production",
+        "BACKUP_ENABLED": "true",
+        "TRANSACTION_TIMEOUT": "30000"
+      },
+      "restart": true,
+      "maxRestarts": 3,
+      "database": {
+        "path": "./news-database.db",
+        "backupPath": "./backups/database",
+        "backupInterval": 3600,
+        "connectionPool": 5,
+        "transactionMode": "immediate"
+      }
+    },
+    
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_MODE": "production",
+        "RATE_LIMIT_AWARE": "true"
+      },
+      "restart": true,
+      "maxRestarts": 3,
+      "optional": true
+    },
+    
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "SEARCH_MODE": "production",
+        "RATE_LIMIT": "100"
+      },
+      "restart": true,
+      "maxRestarts": 3,
+      "optional": true
+    }
+  },
+  
+  "security": {
+    "enablePathValidation": true,
+    "allowedExecutables": [
+      "node.exe",
+      "npm.cmd",
+      "npx.cmd"
+    ],
+    "processIsolation": true,
+    "privilegeEscalation": false,
+    "secureDefaults": true
+  },
+  
+  "logging": {
+    "level": "info",
+    "rotation": {
+      "enabled": true,
+      "maxSize": "100MB",
+      "maxFiles": 10,
+      "compress": true
+    },
+    "destinations": [
+      {
+        "type": "file",
+        "path": "./logs/production-mcp.log",
+        "level": "info"
+      },
+      {
+        "type": "file", 
+        "path": "./logs/production-errors.log",
+        "level": "error"
+      },
+      {
+        "type": "console",
+        "level": "info"
+      }
+    ],
+    "structured": true,
+    "includeMetadata": true
+  },
+  
+  "monitoring": {
+    "metricsEnabled": true,
+    "healthChecks": {
+      "enabled": true,
+      "interval": 30,
+      "timeout": 10,
+      "endpoints": [
+        "http://localhost:3006/health"
+      ]
+    },
+    "performance": {
+      "trackExecutionTime": true,
+      "trackMemoryUsage": true,
+      "trackErrorRate": true,
+      "alertThresholds": {
+        "executionTime": 300,
+        "errorRate": 0.05,
+        "memoryUsage": 512
+      }
+    }
+  },
+  
+  "workflow": {
+    "timeouts": {
+      "default": 300,
+      "newsCollection": 180,
+      "fileProcessing": 120,
+      "databaseOperations": 60
+    },
+    "retries": {
+      "maxAttempts": 3,
+      "backoffStrategy": "exponential",
+      "initialDelay": 1000,
+      "maxDelay": 60000
+    },
+    "concurrency": {
+      "maxParallel": 3,
+      "queueSize": 10
+    }
+  },
+  
+  "notifications": {
+    "enabled": true,
+    "channels": [
+      {
+        "type": "console",
+        "enabled": true,
+        "levels": ["info", "warn", "error", "critical"]
+      },
+      {
+        "type": "file",
+        "enabled": true,
+        "path": "./logs/notifications.log",
+        "levels": ["warn", "error", "critical"]
+      },
+      {
+        "type": "eventlog",
+        "enabled": true,
+        "source": "Production-MCP-Automation",
+        "levels": ["error", "critical"]
+      }
+    ],
+    "escalation": {
+      "critical": {
+        "immediate": true,
+        "retry": true,
+        "maxRetries": 5
+      },
+      "error": {
+        "delay": 300,
+        "retry": true,
+        "maxRetries": 3
+      }
+    }
+  },
+  
+  "backup": {
+    "enabled": true,
+    "retention": {
+      "days": 7,
+      "maxBackups": 50
+    },
+    "compression": true,
+    "verification": true,
+    "schedule": "daily",
+    "criticalFiles": [
+      "allafrica-headlines.txt",
+      "news-database.db", 
+      "enhanced-config.json",
+      "production-config.json"
+    ]
+  },
+  
+  "maintenance": {
+    "cleanup": {
+      "enabled": true,
+      "schedule": "daily",
+      "targets": [
+        {
+          "path": "./temp",
+          "pattern": "*.tmp",
+          "maxAge": 1
+        },
+        {
+          "path": "./logs",
+          "pattern": "*.log",
+          "maxAge": 30
+        },
+        {
+          "path": "./backups",
+          "pattern": "*",
+          "maxAge": 7
+        }
+      ]
+    }
+  },
+  
+  "integration": {
+    "aiPlatforms": {
+      "chatgpt": {
+        "supported": true,
+        "requiresExtension": true,
+        "configPath": "./production-config.json"
+      },
+      "claude": {
+        "supported": true,
+        "requiresExtension": true,
+        "configPath": "./production-config.json"
+      },
+      "perplexity": {
+        "supported": true,
+        "requiresExtension": true,
+        "configPath": "./production-config.json"
+      }
+    },
+    "mcpSuperAssistant": {
+      "proxyPort": 3006,
+      "transport": "streamableHttp",
+      "endpoint": "/mcp",
+      "headers": {
+        "Accept": "application/json,text/event-stream"
+      }
+    }
+  },
+  
+  "validation": {
+    "dependencies": {
+      "node": {
+        "minVersion": "16.0.0",
+        "required": true
+      },
+      "npm": {
+        "minVersion": "8.0.0", 
+        "required": true
+      },
+      "powershell": {
+        "minVersion": "5.1",
+        "required": true
+      }
+    },
+    "files": {
+      "required": [
+        "package.json",
+        "fetchAllAfrica.js",
+        "production-mcp-automation.ps1"
+      ],
+      "optional": [
+        "news-database.db",
+        "enhanced-config.json"
+      ]
+    },
+    "diskSpace": {
+      "minimum": "1GB",
+      "recommended": "5GB"
+    }
+  }
+}

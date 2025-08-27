@@ -1,0 +1,58 @@
+{
+  "name": "advanced-news-automation",
+  "version": "3.0.0",
+  "description": "Production-ready news automation with MCP server integration",
+  "main": "src/news-automation.js",
+  "scripts": {
+    "start": "node src/orchestrator/master-controller.js",
+    "orchestrator:start": "node src/orchestrator/master-controller.js",
+    "orchestrator:dev": "nodemon src/orchestrator/master-controller.js",
+    "agents:start": "concurrently \"npm run agent:news\" \"npm run agent:intelligence\"",
+    "agent:news": "node -e \"const Agent = require('./src/agents/news-fetcher-agent'); new Agent({id: 'news-fetcher'}).start()\"",
+    "agent:intelligence": "node -e \"const Agent = require('./src/agents/intelligence-agent'); new Agent({id: 'intelligence'}).start()\"",
+    "mcp-server": "npx @browsermcp/mcp",
+    "mcp:start": "concurrently \"npm run mcp:news\" \"npm run mcp:filesystem\"",
+    "mcp:news": "node enhanced-mcp-server.js",
+    "mcp:filesystem": "npx @modelcontextprotocol/server-filesystem .",
+    "dev": "npm run orchestrator:dev",
+    "deploy": "node deployment/scripts/production-deploy.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node tests/unit/run-tests.js",
+    "test:integration": "node tests/integration/run-tests.js",
+    "setup": "node deployment/scripts/initialize-project.js",
+    "build": "echo 'Build completed - No transpilation needed for Node.js'",
+    "validate": "node deployment/scripts/validate-system.js",
+    "health": "curl -f http://localhost:3000/health || echo 'Health check failed'",
+    "install-mcp": "npm install @modelcontextprotocol/sdk axios express cors winston concurrently"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0",
+    "compression": "^1.7.4",
+    "concurrently": "^8.2.0",
+    "cors": "^2.8.5",
+    "date-fns": "^3.0.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "node-fetch": "^2.7.0",
+    "rss-parser": "^3.12.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.55.0",
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "news-automation",
+    "mcp-servers",
+    "ai-integration",
+    "production-ready"
+  ],
+  "author": "DevOps Automation Team",
+  "license": "MIT"
+}

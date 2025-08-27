@@ -1,0 +1,19 @@
+{
+  "root": ".",
+  "name": "News Application Workspace",
+  "description": "A workspace for the news application project, which includes a React frontend and a Node.js backend.",
+  "tools": {
+    "install": {
+      "command": "npm install",
+      "description": "Installs project dependencies from package.json."
+    },
+    "start_dev": {
+      "command": "npm run dev",
+      "description": "Runs the application in development mode."
+    },
+    "build": {
+      "command": "npm run build",
+      "description": "Builds the application for production."
+    }
+  }
+}

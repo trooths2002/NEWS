@@ -1,0 +1,62 @@
+{
+  "name": "news-automation-mcp",
+  "version": "2.0.0",
+  "description": "Fast-track news automation with MCP server integration",
+  "main": "scripts/news-automation.js",
+  "scripts": {
+    "start": "node scripts/news-automation.js",
+    "deploy": "powershell -ExecutionPolicy Bypass -File quick-deploy.ps1 -Action all",
+    "setup": "powershell -ExecutionPolicy Bypass -File quick-deploy.ps1 -Action setup",
+    "test": "node scripts/news-automation.js",
+    "mcp-config": "echo 'MCP configuration available at config/mcp-config.json'"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "^0.6.0",
+    "@modelcontextprotocol/server-brave-search": "^0.6.0",
+    "@modelcontextprotocol/server-sqlite": "^0.6.0",
+    "@modelcontextprotocol/server-github": "^0.6.0",
+    "rss-parser": "^3.12.0",
+    "node-fetch": "^2.6.1",
+    "cheerio": "^1.0.0-rc.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "local"
+  },
+  "keywords": [
+    "news",
+    "automation",
+    "mcp",
+    "ai",
+    "scraping",
+    "scheduling"
+  ],
+  "author": "News Automation Team",
+  "license": "MIT",
+  "mcp": {
+    "servers": {
+      "filesystem": {
+        "command": "node",
+        "args": ["node_modules/@modelcontextprotocol/server-filesystem/dist/index.js"]
+      },
+      "brave-search": {
+        "command": "node", 
+        "args": ["node_modules/@modelcontextprotocol/server-brave-search/dist/index.js"]
+      },
+      "sqlite": {
+        "command": "node",
+        "args": ["node_modules/@modelcontextprotocol/server-sqlite/dist/index.js"]
+      },
+      "github": {
+        "command": "node",
+        "args": ["node_modules/@modelcontextprotocol/server-github/dist/index.js"]
+      }
+    }
+  }
+}

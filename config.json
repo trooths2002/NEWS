@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "news-fetcher": {
+      "command": "node",
+      "args": ["mcp-server-stdio.js"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "port": 3006,
+  "sources": [
+    {
+      "type": "rss",
+      "url": "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf",
+      "name": "AllAfrica Latest"
+    }
+  ],
+  "output": {
+    "type": "api",
+    "endpoint": "/api/headlines"
+  }
+}
