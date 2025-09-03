@@ -1,0 +1,147 @@
+name: Enhanced Intelligence Platform CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run validation daily at 6 AM UTC
+    - cron: '0 6 * * *'
+
+jobs:
+  validate-system:
+    name: System Validation
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Run system validation
+      shell: pwsh
+      run: |
+        .\Comprehensive-Workflow-Validation.ps1 -TestLevel Standard -GenerateReport
+        
+    - name: Upload validation report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: validation-report
+        path: NEWS-PERSISTENT/workflows/validation-report-*.json
+        
+  test-mcp-servers:
+    name: Test MCP Servers
+    runs-on: windows-latest
+    needs: validate-system
+    
+    strategy:
+      matrix:
+        server:
+          - intelligent-news-aggregator-mcp.js
+          - resilient-monitoring-agent-mcp.js
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm install
+      
+    - name: Test MCP Server Syntax
+      run: node -c ${{ matrix.server }}
+      
+    - name: Test MCP Server Startup
+      shell: pwsh
+      run: |
+        $process = Start-Process -FilePath "node" -ArgumentList "${{ matrix.server }}" -NoNewWindow -PassThru
+        Start-Sleep -Seconds 5
+        if ($process.HasExited) {
+          Write-Error "Server failed to start"
+          exit 1
+        }
+        Stop-Process -Id $process.Id -Force
+        Write-Host "Server started successfully"
+
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: windows-latest
+    needs: [validate-system, test-mcp-servers]
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+      
+    - name: Generate documentation
+      shell: pwsh
+      run: |
+        # Create docs directory
+        New-Item -ItemType Directory -Path "docs" -Force
+        
+        # Copy documentation files
+        Copy-Item "README.md" "docs/"
+        Copy-Item "ENHANCED-DEPLOYMENT-GUIDE.md" "docs/" -ErrorAction SilentlyContinue
+        
+        # Create index.html
+        @"
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Enhanced Intelligence Platform</title>
+            <meta charset="UTF-8">
+            <style>
+                body { font-family: Arial, sans-serif; margin: 40px; }
+                .header { background: #2d5016; color: white; padding: 20px; border-radius: 8px; }
+                .content { margin-top: 20px; }
+                .link { display: block; margin: 10px 0; padding: 10px; background: #f5f5f5; text-decoration: none; color: #333; border-radius: 4px; }
+                .link:hover { background: #e0e0e0; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🚀 Enhanced Persistent Geopolitical Intelligence Platform</h1>
+                <p>Enterprise-grade intelligence collection and analysis system</p>
+            </div>
+            <div class="content">
+                <h2>📖 Documentation</h2>
+                <a href="README.html" class="link">📋 System Overview & Quick Start</a>
+                <a href="ENHANCED-DEPLOYMENT-GUIDE.html" class="link">🛠️ Complete Deployment Guide</a>
+                <h2>🔗 Resources</h2>
+                <a href="https://github.com/trooths2002/NEWS-Enhanced-Persistent" class="link">📦 GitHub Repository</a>
+                <a href="https://github.com/trooths2002/NEWS-Enhanced-Persistent/actions" class="link">⚡ GitHub Actions</a>
+            </div>
+        </body>
+        </html>
+        "@ | Out-File "docs/index.html" -Encoding UTF8
+      
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: docs/
+        
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v2

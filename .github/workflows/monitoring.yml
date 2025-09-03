@@ -1,0 +1,38 @@
+name: System Monitoring
+
+on:
+  schedule:
+    # Run monitoring every 30 minutes
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: System Health Check
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Run health validation
+      shell: pwsh
+      run: |
+        .\Comprehensive-Workflow-Validation.ps1 -TestLevel Basic
+        
+    - name: Check system resources
+      shell: pwsh
+      run: |
+        # Check available resources
+        Get-WmiObject -Class Win32_LogicalDisk | Where-Object { $_.DeviceID -eq "C:" } | Select-Object Size, FreeSpace
+        Get-WmiObject -Class Win32_ComputerSystem | Select-Object TotalPhysicalMemory
+        
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "::error::System health check failed"

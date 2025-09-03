@@ -1,0 +1,88 @@
+# Node modules
+node_modules/
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# SQLite databases (keep structure, ignore data)
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.backup
+*.bak
+
+# Test output
+test-results/
+coverage/
+
+# Build output
+dist/
+build/
+
+# Sensitive data
+**/secrets/
+**/credentials/
+**/*-secrets.*
+**/*-credentials.*
+
+# Large data files
+NEWS-PERSISTENT/current/daily/*/raw-feeds/*.xml
+NEWS-PERSISTENT/archives/*/
+NEWS-PERSISTENT/backups/*/
+
+# Keep structure but ignore large content
+NEWS-PERSISTENT/current/daily/*/collection-sessions/*/raw-feeds/
+NEWS-PERSISTENT/logs/*.log
+NEWS-PERSISTENT/workflows/health-checks/health-*.json
