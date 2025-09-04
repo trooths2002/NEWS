@@ -1,0 +1,41 @@
+&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8" /&gt;
+  &lt;meta name="viewport" content="width=device-width,initial-scale=1" /&gt;
+  &lt;title&gt;Pan-African Geopolitical Intelligence&lt;/title&gt;
+  &lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
+&lt;/head&gt;
+&lt;body class="bg-gray-50 text-gray-900"&gt;
+  &lt;div class="max-w-6xl mx-auto p-6 space-y-6"&gt;
+    &lt;header class="flex items-center justify-between"&gt;
+      &lt;h1 class="text-2xl font-bold"&gt;Pan-African Geopolitical Intelligence&lt;/h1&gt;
+      &lt;nav class="flex gap-2"&gt;
+        &lt;button id="tab-feed"   class="px-4 py-2 rounded-xl border bg-black text-white"&gt;Feed&lt;/button&gt;
+        &lt;button id="tab-briefs" class="px-4 py-2 rounded-xl border bg-white"&gt;Briefs&lt;/button&gt;
+        &lt;button id="tab-health" class="px-4 py-2 rounded-xl border bg-white"&gt;Health&lt;/button&gt;
+      &lt;/nav&gt;
+    &lt;/header&gt;
+
+    &lt;section id="filters" class="flex gap-2"&gt;
+      &lt;input id="q"      placeholder="Search…" class="border rounded-xl px-3 py-2 w-full" /&gt;
+      &lt;input id="region" placeholder="Region (e.g. Africa)" class="border rounded-xl px-3 py-2" /&gt;
+      &lt;input id="topic"  placeholder="Topic (e.g. security)" class="border rounded-xl px-3 py-2" /&gt;
+      &lt;button id="btnFilter" class="px-4 py-2 rounded-xl bg-black text-white"&gt;Filter&lt;/button&gt;
+    &lt;/section&gt;
+
+    &lt;section id="content" class="space-y-4"&gt;
+      &lt;div id="count" class="text-sm text-gray-600"&gt;&lt;/div&gt;
+      &lt;div id="grid" class="grid md:grid-cols-2 gap-4"&gt;&lt;/div&gt;
+      &lt;pre id="briefs" class="hidden text-sm overflow-auto border rounded-2xl p-4 bg-white"&gt;&lt;/pre&gt;
+      &lt;div id="health" class="hidden grid md:grid-cols-3 gap-4"&gt;&lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;footer class="text-xs text-gray-500 pt-6 border-t"&gt;
+      Backed by your NEWS repo data &amp; MCP processes.
+    &lt;/footer&gt;
+  &lt;/div&gt;
+
+  &lt;script type="module" src="./app.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
