@@ -1,0 +1,46 @@
+name: "Enhanced Security CodeQL Configuration"
+
+# CodeQL configuration for comprehensive security analysis
+disable-default-queries: false
+
+# Include additional security-focused query suites
+queries:
+  - name: security-extended
+    uses: security-extended
+  - name: security-and-quality
+    uses: security-and-quality
+
+# Custom query filters
+query-filters:
+  - exclude:
+      id: js/unused-local-variable
+      reason: "Focus on security issues first"
+  - include:
+      tags: 
+        - security
+        - external/cwe
+
+# Path filters - exclude non-critical paths
+paths-ignore:
+  - "docs/**"
+  - "**/*.md"
+  - "**/test/**"
+  - "**/tests/**"
+  - "node_modules/**"
+
+# Path filters - include important paths
+paths:
+  - "src/**"
+  - "server/**"
+  - "*.js"
+  - "*.mjs"
+  - ".github/workflows/**"
+
+# Compilation configuration for JavaScript
+javascript:
+  # Exclude test files from analysis to focus on production code
+  exclude:
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/*.test.js"
+    - "**/*.spec.js"

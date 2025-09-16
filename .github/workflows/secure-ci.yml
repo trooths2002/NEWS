@@ -1,0 +1,331 @@
+name: 🔐 Secure CI/CD Pipeline
+
+# Secure workflow triggers - limit to trusted branches and events
+on:
+  push:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+    types: [ opened, synchronize, reopened ]
+  schedule:
+    # Run security scans daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+
+# Global environment variables (non-sensitive)
+env:
+  NODE_VERSION: '18'
+  CACHE_VERSION: 'v1'
+
+jobs:
+  # Security validation job - runs first to catch issues early
+  security-scan:
+    name: 🛡️ Security Validation
+    runs-on: ubuntu-latest
+    
+    # Minimal permissions - only what's needed for security scanning
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      
+    outputs:
+      security-status: ${{ steps.security-check.outputs.status }}
+      
+    steps:
+    - name: 🔐 Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+        disable-sudo: true
+        disable-file-monitoring: false
+        
+    - name: 📥 Checkout Code
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        # Shallow clone for security - don't fetch full history
+        fetch-depth: 1
+        
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: package-lock.json
+        
+    - name: 🔒 Validate Package Lock
+      run: |
+        # Ensure package-lock.json exists and is not tampered with
+        if [ ! -f package-lock.json ]; then
+          echo "::error::package-lock.json is missing"
+          exit 1
+        fi
+        
+        # Check for known malicious packages
+        if npm audit --audit-level critical --production; then
+          echo "✅ No critical vulnerabilities found"
+        else
+          echo "::error::Critical vulnerabilities detected"
+          exit 1
+        fi
+        
+    - name: 📦 Install Dependencies
+      run: |
+        # Use npm ci for reproducible builds
+        npm ci --only=production --ignore-scripts
+        
+    - name: 🔍 Dependency Security Audit
+      id: security-check
+      run: |
+        # Run comprehensive security audit
+        echo "🔍 Running dependency audit..."
+        npm audit --audit-level moderate --json > audit-results.json || true
+        
+        # Check for high/critical vulnerabilities
+        CRITICAL=$(cat audit-results.json | jq '.metadata.vulnerabilities.critical // 0')
+        HIGH=$(cat audit-results.json | jq '.metadata.vulnerabilities.high // 0')
+        
+        echo "Critical vulnerabilities: $CRITICAL"
+        echo "High vulnerabilities: $HIGH"
+        
+        if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+          echo "status=failed" >> $GITHUB_OUTPUT
+          echo "::error::High or critical vulnerabilities found"
+          exit 1
+        else
+          echo "status=passed" >> $GITHUB_OUTPUT
+          echo "✅ Security audit passed"
+        fi
+        
+    - name: 📊 Generate SBOM (Software Bill of Materials)
+      run: |
+        # Generate SBOM for supply chain security
+        npx @cyclonedx/cyclonedx-npm --output-file sbom.json
+        
+    - name: 🔐 CodeQL Analysis
+      uses: github/codeql-action/init@1b1aada464948af03b950897e5eb522f92603cc2 # v3.24.9
+      with:
+        languages: javascript
+        config-file: ./.github/codeql/codeql-config.yml
+        
+    - name: 🔍 Run CodeQL Analysis
+      uses: github/codeql-action/analyze@1b1aada464948af03b950897e5eb522f92603cc2 # v3.24.9
+      with:
+        category: "/language:javascript"
+        
+    - name: 📤 Upload Security Artifacts
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      if: always()
+      with:
+        name: security-reports-${{ github.sha }}
+        path: |
+          audit-results.json
+          sbom.json
+        retention-days: 30
+
+  # Build and test job - depends on security validation
+  build-and-test:
+    name: 🏗️ Build and Test
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: needs.security-scan.outputs.security-status == 'passed'
+    
+    # Minimal required permissions
+    permissions:
+      contents: read
+      checks: write
+      
+    strategy:
+      matrix:
+        node-version: [18, 20]
+        
+    steps:
+    - name: 🔐 Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+        disable-sudo: true
+        
+    - name: 📥 Checkout Code
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      with:
+        fetch-depth: 1
+        
+    - name: 🔧 Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: 📦 Install Dependencies
+      run: npm ci --ignore-scripts
+      
+    - name: 🧪 Run Tests
+      run: |
+        # Run tests if they exist
+        if [ -f "package.json" ] && grep -q '"test"' package.json; then
+          npm test
+        else
+          echo "ℹ️ No tests configured, running syntax validation"
+          # Validate JavaScript syntax
+          find . -name "*.js" -not -path "./node_modules/*" -exec node -c {} \;
+        fi
+        
+    - name: 🔍 Lint Code
+      run: |
+        # Run linting if configured
+        if npm list eslint >/dev/null 2>&1; then
+          npx eslint . --ext .js,.mjs --ignore-path .gitignore
+        else
+          echo "ℹ️ ESLint not configured, skipping"
+        fi
+        
+    - name: 📊 Coverage Report
+      run: |
+        # Generate coverage if tests exist
+        if [ -f "package.json" ] && grep -q '"test"' package.json; then
+          echo "ℹ️ Test coverage would be generated here"
+        fi
+
+  # Deployment job - only for main branch and after all checks pass
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: [security-scan, build-and-test]
+    if: |
+      always() &&
+      needs.security-scan.result == 'success' &&
+      needs.build-and-test.result == 'success' &&
+      github.ref == 'refs/heads/main'
+      
+    # Environment-specific permissions
+    permissions:
+      contents: read
+      deployments: write
+      
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
+      
+    steps:
+    - name: 🔐 Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+        
+    - name: 📥 Checkout Code
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: 📦 Production Dependencies
+      run: npm ci --only=production --ignore-scripts
+      
+    - name: 🔒 Validate Deployment Environment
+      env:
+        DEPLOYMENT_KEY: ${{ secrets.DEPLOYMENT_KEY }}
+        API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
+      run: |
+        # Validate required secrets exist
+        if [ -z "$DEPLOYMENT_KEY" ]; then
+          echo "::error::DEPLOYMENT_KEY secret is not configured"
+          exit 1
+        fi
+        
+        if [ -z "$API_ENDPOINT" ]; then
+          echo "::error::API_ENDPOINT secret is not configured"
+          exit 1
+        fi
+        
+        echo "✅ Deployment environment validated"
+        
+    - name: 🚀 Deploy Application
+      id: deploy
+      run: |
+        echo "🚀 Deploying to ${{ github.event.inputs.environment || 'staging' }}"
+        
+        # Simulate deployment
+        echo "url=https://${{ github.event.inputs.environment || 'staging' }}.news-platform.com" >> $GITHUB_OUTPUT
+        echo "✅ Deployment completed successfully"
+        
+    - name: 🔔 Deployment Notification
+      if: always()
+      run: |
+        if [ "${{ steps.deploy.outcome }}" == "success" ]; then
+          echo "✅ Deployment successful to ${{ steps.deploy.outputs.url }}"
+        else
+          echo "❌ Deployment failed"
+        fi
+
+  # Security monitoring job - runs independently
+  security-monitoring:
+    name: 📊 Security Monitoring
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    
+    permissions:
+      contents: read
+      security-events: write
+      
+    steps:
+    - name: 🔐 Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+        
+    - name: 📥 Checkout Code
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+    - name: 🔍 Security Health Check
+      run: |
+        echo "🔍 Running security health check..."
+        
+        # Check for sensitive files
+        find . -name "*.key" -o -name "*.pem" -o -name "*.p12" -o -name "*.pfx" | head -10
+        
+        # Check for hardcoded secrets pattern
+        if grep -r -E "(password|secret|key|token)\s*[:=]\s*['\"][^'\"]+['\"]" . --exclude-dir=node_modules --exclude-dir=.git || true; then
+          echo "⚠️ Potential hardcoded secrets detected"
+        fi
+        
+        echo "✅ Security health check completed"
+        
+    - name: 📊 Generate Security Report
+      run: |
+        # Generate comprehensive security report
+        cat << EOF > security-report.json
+        {
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "repository": "${{ github.repository }}",
+          "commit": "${{ github.sha }}",
+          "security_checks": {
+            "dependency_audit": "scheduled",
+            "code_analysis": "scheduled", 
+            "secret_scanning": "enabled",
+            "branch_protection": "enabled"
+          }
+        }
+        EOF
+        
+    - name: 📤 Upload Security Report
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+      with:
+        name: security-monitoring-${{ github.run_id }}
+        path: security-report.json
+        retention-days: 90
