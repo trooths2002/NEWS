@@ -1,0 +1,102 @@
+{
+  "name": "🔐 Secure NEWS Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:18-bullseye",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "version": "18"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "security.workspace.trust.enabled": true,
+        "git.autofetch": false,
+        "extensions.autoUpdate": false,
+        "telemetry.telemetryLevel": "off",
+        "npm.packageManager": "npm",
+        "javascript.preferences.includePackageJsonAutoImports": "off",
+        "typescript.preferences.includePackageJsonAutoImports": "off",
+        "files.associations": {
+          "*.env.template": "properties",
+          "*.env.example": "properties"
+        },
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/.git": true,
+          "**/.DS_Store": true,
+          "**/Thumbs.db": true,
+          "**/*.log": true
+        }
+      },
+      "extensions": [
+        "ms-vscode.vscode-json",
+        "ms-vscode.vscode-yaml",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-eslint",
+        "github.vscode-github-actions",
+        "ms-vscode.powershell",
+        "github.copilot-security"
+      ]
+    }
+  },
+
+  "containerEnv": {
+    "NODE_ENV": "development",
+    "NPM_CONFIG_FUND": "false",
+    "NPM_CONFIG_AUDIT": "true"
+  },
+
+  "remoteUser": "node",
+  
+  "runArgs": [
+    "--security-opt", "seccomp=unconfined",
+    "--security-opt", "apparmor=unconfined"
+  ],
+
+  "mounts": [
+    "source=${localWorkspaceFolder}/.env,target=/workspaces/NEWS/.env,type=bind,consistency=cached,readonly"
+  ],
+
+  "postCreateCommand": "npm install && npm audit fix --force",
+  
+  "postStartCommand": "git config --global --add safe.directory /workspaces/NEWS",
+
+  "forwardPorts": [3000, 8080, 9000],
+  
+  "portsAttributes": {
+    "3000": {
+      "label": "News Server",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "MCP Server", 
+      "onAutoForward": "ignore"
+    },
+    "9000": {
+      "label": "Monitoring",
+      "onAutoForward": "ignore"
+    }
+  },
+
+  "shutdownAction": "stopContainer",
+  
+  "privileged": false,
+  
+  "init": true,
+  
+  "capAdd": [],
+  
+  "securityOpt": [
+    "no-new-privileges:true"
+  ]
+}
