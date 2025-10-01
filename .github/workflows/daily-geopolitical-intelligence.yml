@@ -1,0 +1,395 @@
+name: Daily Geopolitical Intelligence Collection
+
+# Run daily at 8:00 AM EST (12:00 PM UTC)
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:  # Allow manual triggering
+    inputs:
+      regions:
+        description: 'Specify regions (panafrican,caribbean,african-american,all)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - panafrican
+          - caribbean
+          - african-american
+      output_format:
+        description: 'Output format for reports'
+        required: false
+        default: 'comprehensive'
+        type: choice
+        options:
+          - comprehensive
+          - executive-brief
+          - trending-only
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.9'
+  POWERSHELL_VERSION: '7.x'
+
+jobs:
+  daily-intelligence-collection:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        region: [panafrican, caribbean, african-american]
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup PowerShell Core
+        uses: azure/powershell@v1
+        with:
+          azPSVersion: 'latest'
+          inlineScript: |
+            Write-Output "PowerShell Core $($PSVersionTable.PSVersion) is ready"
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm audit fix --force
+        shell: cmd
+
+      - name: Configure Environment Variables
+        shell: pwsh
+        run: |
+          # Load environment variables from .env file if it exists
+          if (Test-Path ".env") {
+            Get-Content ".env" | ForEach-Object {
+              if ($_ -match "^([^#][^=]+)=(.*)$") {
+                [Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
+              }
+            }
+          }
+          
+          # Set GitHub-specific environment variables
+          echo "REGION=${{ matrix.region }}" >> $env:GITHUB_ENV
+          echo "OUTPUT_FORMAT=${{ github.event.inputs.output_format || 'comprehensive' }}" >> $env:GITHUB_ENV
+          echo "WORKFLOW_RUN_ID=${{ github.run_id }}" >> $env:GITHUB_ENV
+          echo "WORKFLOW_RUN_NUMBER=${{ github.run_number }}" >> $env:GITHUB_ENV
+
+      - name: Create Output Directories
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $baseDir = "NEWS-PERSISTENT"
+          $regions = @("reports", "analysis", "trending", "executive-briefs", "logs")
+          
+          foreach ($region in $regions) {
+            $path = "$baseDir/$region/$date"
+            New-Item -ItemType Directory -Path $path -Force
+            Write-Output "Created directory: $path"
+          }
+
+      - name: Initialize MCP Infrastructure
+        shell: pwsh
+        run: |
+          Write-Output "Initializing MCP Infrastructure for ${{ matrix.region }} intelligence collection"
+          
+          # Run the enhanced persistent news structure script
+          if (Test-Path "Enhanced-Persistent-News-Structure.ps1") {
+            .\Enhanced-Persistent-News-Structure.ps1 -Force
+          }
+          
+          # Initialize MCP servers
+          if (Test-Path "Initialize-QoderMCP.ps1") {
+            .\Initialize-QoderMCP.ps1 -Region ${{ matrix.region }}
+          }
+
+      - name: Run Geopolitical Intelligence Collection
+        shell: pwsh
+        run: |
+          Write-Output "Starting intelligence collection for region: ${{ matrix.region }}"
+          
+          $date = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+          $logFile = "NEWS-PERSISTENT/logs/$date/collection-${{ matrix.region }}.log"
+          
+          try {
+            # Execute the main intelligence collection script
+            if (Test-Path "Enhanced-Persistent-Workflow-Automation.ps1") {
+              .\Enhanced-Persistent-Workflow-Automation.ps1 `
+                -Mode "ScheduleDaily" `
+                -Region "${{ matrix.region }}" `
+                -OutputFormat "${{ env.OUTPUT_FORMAT }}" `
+                -LogLevel "Detailed" `
+                -MaxConcurrency 3 `
+                *> $logFile
+            } else {
+              Write-Warning "Enhanced-Persistent-Workflow-Automation.ps1 not found"
+            }
+            
+            # Fallback to geopolitical intelligence script
+            if (Test-Path "Start-GeopoliticalIntelligence.ps1") {
+              .\Start-GeopoliticalIntelligence.ps1 `
+                -Region "${{ matrix.region }}" `
+                -Daily `
+                *>> $logFile
+            }
+            
+          } catch {
+            Write-Error "Intelligence collection failed: $($_.Exception.Message)"
+            echo "COLLECTION_STATUS=failed" >> $env:GITHUB_ENV
+            exit 1
+          }
+          
+          echo "COLLECTION_STATUS=success" >> $env:GITHUB_ENV
+
+      - name: Generate Intelligence Reports
+        shell: pwsh
+        run: |
+          Write-Output "Generating intelligence reports for ${{ matrix.region }}"
+          
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $region = "${{ matrix.region }}"
+          
+          # Generate comprehensive report
+          if (Test-Path "report-generator.js") {
+            node report-generator.js --region $region --date $date --format comprehensive
+          }
+          
+          # Generate executive brief
+          $briefScript = @"
+          param([string]\$Region, [string]\$Date)
+          
+          \$reportData = Get-Content "NEWS-PERSISTENT/reports/\$Date/\$Region-comprehensive.json" | ConvertFrom-Json
+          \$brief = @{
+            date = \$Date
+            region = \$Region
+            key_developments = \$reportData.headlines | Select-Object -First 5
+            threat_level = \$reportData.risk_assessment.overall_threat
+            trending_topics = \$reportData.trending | Select-Object -First 3
+            strategic_implications = \$reportData.analysis.strategic_points
+          }
+          
+          \$brief | ConvertTo-Json -Depth 10 | Out-File "NEWS-PERSISTENT/executive-briefs/\$Date/\$Region-brief.json"
+          Write-Output "Executive brief generated for \$Region"
+"@
+          
+          $briefScript | Out-File -FilePath "temp-brief-generator.ps1"
+          .\temp-brief-generator.ps1 -Region $region -Date $date
+          Remove-Item "temp-brief-generator.ps1" -Force
+
+      - name: Validate Data Quality
+        shell: pwsh
+        run: |
+          Write-Output "Validating data quality for ${{ matrix.region }}"
+          
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $region = "${{ matrix.region }}"
+          $reportPath = "NEWS-PERSISTENT/reports/$date/$region-comprehensive.json"
+          
+          if (Test-Path $reportPath) {
+            $report = Get-Content $reportPath | ConvertFrom-Json
+            $articleCount = ($report.articles | Measure-Object).Count
+            $sourceCount = ($report.sources | Select-Object -Unique | Measure-Object).Count
+            
+            Write-Output "Articles collected: $articleCount"
+            Write-Output "Unique sources: $sourceCount"
+            
+            if ($articleCount -lt 10) {
+              Write-Warning "Low article count for $region. Consider reviewing source configurations."
+            }
+            
+            # Set output for summary
+            echo "ARTICLES_COUNT_${{ matrix.region }}=$articleCount" >> $env:GITHUB_ENV
+            echo "SOURCES_COUNT_${{ matrix.region }}=$sourceCount" >> $env:GITHUB_ENV
+          } else {
+            Write-Error "Report file not found: $reportPath"
+            echo "ARTICLES_COUNT_${{ matrix.region }}=0" >> $env:GITHUB_ENV
+            echo "SOURCES_COUNT_${{ matrix.region }}=0" >> $env:GITHUB_ENV
+          }
+
+      - name: Archive Intelligence Data
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $region = "${{ matrix.region }}"
+          $archiveName = "$region-intelligence-$date.zip"
+          
+          # Create archive of all collected data
+          Compress-Archive -Path "NEWS-PERSISTENT/reports/$date/$region*" -DestinationPath "archives/$archiveName" -Force
+          
+          Write-Output "Intelligence data archived: $archiveName"
+          echo "ARCHIVE_NAME_${{ matrix.region }}=$archiveName" >> $env:GITHUB_ENV
+
+      - name: Upload Intelligence Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: geopolitical-intelligence-${{ matrix.region }}-${{ github.run_number }}
+          path: |
+            NEWS-PERSISTENT/reports/**/*.json
+            NEWS-PERSISTENT/executive-briefs/**/*.json
+            NEWS-PERSISTENT/trending/**/*.json
+            NEWS-PERSISTENT/logs/**/*.log
+            archives/*.zip
+          retention-days: 30
+
+      - name: Health Check and Monitoring
+        shell: pwsh
+        run: |
+          # Run system health check
+          if (Test-Path "check-system-status.js") {
+            node check-system-status.js --region ${{ matrix.region }}
+          }
+          
+          # Monitor collection performance
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $logPath = "NEWS-PERSISTENT/logs/$date/collection-${{ matrix.region }}.log"
+          
+          if (Test-Path $logPath) {
+            $logContent = Get-Content $logPath
+            $errorCount = ($logContent | Select-String "ERROR" | Measure-Object).Count
+            $warningCount = ($logContent | Select-String "WARNING" | Measure-Object).Count
+            
+            Write-Output "Errors: $errorCount, Warnings: $warningCount"
+            
+            if ($errorCount -gt 5) {
+              Write-Error "High error count detected. Review system configuration."
+            }
+          }
+
+  consolidate-intelligence:
+    needs: daily-intelligence-collection
+    runs-on: windows-latest
+    if: always()
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate Master Intelligence Report
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          $masterReport = @{
+            collection_date = $date
+            workflow_run = ${{ github.run_number }}
+            regions = @{}
+            summary = @{}
+          }
+          
+          $regions = @("panafrican", "caribbean", "african-american")
+          
+          foreach ($region in $regions) {
+            $artifactPath = "artifacts/geopolitical-intelligence-$region-${{ github.run_number }}"
+            if (Test-Path $artifactPath) {
+              $reportFile = Get-ChildItem "$artifactPath/NEWS-PERSISTENT/reports/$date/$region-comprehensive.json" -ErrorAction SilentlyContinue
+              if ($reportFile) {
+                $regionData = Get-Content $reportFile.FullName | ConvertFrom-Json
+                $masterReport.regions[$region] = @{
+                  article_count = ($regionData.articles | Measure-Object).Count
+                  source_count = ($regionData.sources | Select-Object -Unique | Measure-Object).Count
+                  top_headlines = $regionData.headlines | Select-Object -First 3
+                  risk_level = $regionData.risk_assessment.overall_threat
+                }
+              }
+            }
+          }
+          
+          # Calculate summary statistics
+          $totalArticles = ($masterReport.regions.Values | ForEach-Object { $_.article_count } | Measure-Object -Sum).Sum
+          $totalSources = ($masterReport.regions.Values | ForEach-Object { $_.source_count } | Measure-Object -Sum).Sum
+          
+          $masterReport.summary = @{
+            total_articles = $totalArticles
+            total_sources = $totalSources
+            regions_processed = $masterReport.regions.Count
+            collection_status = "completed"
+          }
+          
+          # Save master report
+          New-Item -ItemType Directory -Path "master-reports" -Force
+          $masterReport | ConvertTo-Json -Depth 10 | Out-File "master-reports/daily-intelligence-$date.json"
+          
+          Write-Output "Master intelligence report generated"
+          Write-Output "Total articles collected: $totalArticles"
+          Write-Output "Total sources monitored: $totalSources"
+
+      - name: Update Repository with Latest Intelligence
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd"
+          
+          # Configure git
+          git config --global user.name "Geopolitical Intelligence Bot"
+          git config --global user.email "intelligence@trooths2002.github.io"
+          
+          # Add and commit new intelligence data
+          git add master-reports/
+          git add NEWS-PERSISTENT/
+          
+          $commitMessage = "Daily Intelligence Collection - $date
+          
+          - Pan-African: ${{ env.ARTICLES_COUNT_panafrican || 'N/A' }} articles
+          - Caribbean: ${{ env.ARTICLES_COUNT_caribbean || 'N/A' }} articles  
+          - African American: ${{ env.ARTICLES_COUNT_african-american || 'N/A' }} articles
+          
+          Workflow Run: #${{ github.run_number }}"
+          
+          git commit -m "$commitMessage" || Write-Output "No changes to commit"
+          git push origin main || Write-Output "Push failed or no changes"
+
+      - name: Upload Master Intelligence Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-intelligence-report-${{ github.run_number }}
+          path: master-reports/
+          retention-days: 90
+
+      - name: Notify Collection Status
+        shell: pwsh
+        run: |
+          $date = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+          $status = "✅ Daily Geopolitical Intelligence Collection Completed"
+          
+          Write-Output "$status"
+          Write-Output "Collection Date: $date"
+          Write-Output "Workflow Run: #${{ github.run_number }}"
+          Write-Output "Artifacts Generated: Available for 30-90 days"
+          
+          # Optional: Add notification logic here (Slack, Discord, Email, etc.)
+          # This would require setting up appropriate secrets and webhook URLs
+
+  cleanup:
+    needs: [daily-intelligence-collection, consolidate-intelligence]
+    runs-on: windows-latest
+    if: always()
+    
+    steps:
+      - name: Cleanup Temporary Files
+        shell: pwsh
+        run: |
+          Write-Output "Performing cleanup tasks"
+          
+          # Clean up old log files (keep last 7 days)
+          $cutoffDate = (Get-Date).AddDays(-7)
+          Get-ChildItem "NEWS-PERSISTENT/logs" -Recurse -Directory | 
+            Where-Object { $_.CreationTime -lt $cutoffDate } | 
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          
+          # Clean up temporary processing files
+          Get-ChildItem -Path "." -Name "temp-*" | Remove-Item -Force -ErrorAction SilentlyContinue
+          
+          Write-Output "Cleanup completed"
