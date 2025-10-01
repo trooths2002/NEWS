@@ -1,0 +1,310 @@
+{
+  "daily_intelligence_config": {
+    "version": "2.0.0",
+    "last_updated": "2025-10-01",
+    "collection_schedule": {
+      "primary_time": "12:00 UTC",
+      "timezone": "UTC",
+      "frequency": "daily",
+      "backup_schedule": "18:00 UTC"
+    },
+    "regions": {
+      "panafrican": {
+        "enabled": true,
+        "priority": "high",
+        "sources": [
+          "AllAfrica",
+          "BBC Africa", 
+          "Reuters Africa",
+          "Al Jazeera Africa",
+          "Africa News",
+          "The East African",
+          "Daily Nation",
+          "This Day Nigeria",
+          "Cape Times",
+          "Ghana Web"
+        ],
+        "keywords": [
+          "African Union",
+          "ECOWAS",
+          "SADC",
+          "African politics",
+          "African economy",
+          "African security",
+          "African diplomacy",
+          "continental integration",
+          "African development",
+          "African trade"
+        ],
+        "minimum_articles": 15,
+        "quality_threshold": 0.7
+      },
+      "caribbean": {
+        "enabled": true,
+        "priority": "high",
+        "sources": [
+          "Caribbean National Weekly",
+          "Jamaica Observer",
+          "Trinidad Express",
+          "Barbados Today",
+          "St. Lucia News Online",
+          "Antigua Observer",
+          "The Nassau Guardian",
+          "Dominican Today",
+          "Haiti Libre",
+          "Caribbean360"
+        ],
+        "keywords": [
+          "CARICOM",
+          "Caribbean politics",
+          "Caribbean economy",
+          "Caribbean security",
+          "Caribbean integration",
+          "Caribbean diaspora",
+          "Caribbean trade",
+          "Caribbean culture",
+          "Caribbean development",
+          "Caribbean diplomacy"
+        ],
+        "minimum_articles": 12,
+        "quality_threshold": 0.7
+      },
+      "african_american": {
+        "enabled": true,
+        "priority": "high",
+        "sources": [
+          "The Root",
+          "BET News",
+          "Essence",
+          "Ebony",
+          "The Grio",
+          "Black Enterprise",
+          "Afro American",
+          "Philadelphia Tribune",
+          "Chicago Defender",
+          "Amsterdam News"
+        ],
+        "keywords": [
+          "African American politics",
+          "Black Lives Matter",
+          "civil rights",
+          "African American economy",
+          "African American culture",
+          "Black leadership",
+          "African American community",
+          "racial justice",
+          "Black business",
+          "African American diaspora"
+        ],
+        "minimum_articles": 10,
+        "quality_threshold": 0.7
+      }
+    },
+    "data_sources": {
+      "rss_feeds": {
+        "enabled": true,
+        "timeout": 30,
+        "retry_attempts": 3,
+        "cache_duration": 3600
+      },
+      "web_scraping": {
+        "enabled": true,
+        "rate_limit": 2,
+        "user_agent": "GeopoliticalIntelligenceBot/2.0",
+        "respect_robots_txt": true
+      },
+      "google_cse": {
+        "enabled": true,
+        "daily_quota": 100,
+        "results_per_query": 10
+      },
+      "social_media": {
+        "enabled": false,
+        "platforms": ["twitter", "facebook", "linkedin"],
+        "rate_limits": {
+          "twitter": 300,
+          "facebook": 200,
+          "linkedin": 100
+        }
+      }
+    },
+    "processing": {
+      "deduplication": {
+        "enabled": true,
+        "similarity_threshold": 0.85,
+        "hash_algorithm": "sha256"
+      },
+      "sentiment_analysis": {
+        "enabled": true,
+        "confidence_threshold": 0.6,
+        "language_detection": true
+      },
+      "categorization": {
+        "enabled": true,
+        "categories": [
+          "politics",
+          "economy",
+          "security",
+          "diplomacy",
+          "culture",
+          "trade",
+          "development",
+          "social_issues",
+          "technology",
+          "environment"
+        ]
+      },
+      "risk_assessment": {
+        "enabled": true,
+        "risk_levels": ["low", "medium", "high", "critical"],
+        "factors": [
+          "political_stability",
+          "economic_indicators",
+          "security_threats",
+          "diplomatic_tensions",
+          "social_unrest"
+        ]
+      }
+    },
+    "output_formats": {
+      "comprehensive": {
+        "include_full_articles": true,
+        "include_analysis": true,
+        "include_trending": true,
+        "include_risk_assessment": true,
+        "include_source_metrics": true
+      },
+      "executive_brief": {
+        "max_headlines": 5,
+        "max_trending_topics": 3,
+        "include_risk_summary": true,
+        "include_strategic_implications": true
+      },
+      "trending_only": {
+        "focus_on_trending": true,
+        "trending_threshold": 3,
+        "include_social_metrics": true
+      }
+    },
+    "storage": {
+      "local_storage": {
+        "enabled": true,
+        "base_path": "NEWS-PERSISTENT",
+        "retention_days": 90,
+        "compression": true
+      },
+      "backup_storage": {
+        "enabled": true,
+        "provider": "github_artifacts",
+        "retention_days": 90
+      },
+      "database": {
+        "enabled": true,
+        "type": "sqlite",
+        "path": "NEWS-PERSISTENT/intelligence.db",
+        "backup_frequency": "daily"
+      }
+    },
+    "monitoring": {
+      "health_checks": {
+        "enabled": true,
+        "check_interval": 300,
+        "alert_thresholds": {
+          "error_rate": 0.1,
+          "response_time": 30,
+          "success_rate": 0.8
+        }
+      },
+      "performance_metrics": {
+        "enabled": true,
+        "track_collection_time": true,
+        "track_processing_time": true,
+        "track_source_reliability": true
+      },
+      "alerting": {
+        "enabled": true,
+        "channels": ["github", "log"],
+        "alert_on_failure": true,
+        "alert_on_low_quality": true
+      }
+    },
+    "security": {
+      "api_rate_limiting": {
+        "enabled": true,
+        "requests_per_minute": 60,
+        "burst_limit": 100
+      },
+      "data_encryption": {
+        "enabled": true,
+        "algorithm": "AES-256",
+        "encrypt_sensitive_data": true
+      },
+      "access_control": {
+        "enabled": true,
+        "require_authentication": true,
+        "role_based_access": false
+      }
+    },
+    "automation": {
+      "github_actions": {
+        "enabled": true,
+        "workflow_file": ".github/workflows/daily-geopolitical-intelligence.yml",
+        "manual_trigger": true,
+        "failure_retry": true,
+        "max_retries": 2
+      },
+      "local_scheduling": {
+        "enabled": true,
+        "scheduler": "windows_task_scheduler",
+        "backup_schedule": true
+      },
+      "notifications": {
+        "enabled": true,
+        "on_success": false,
+        "on_failure": true,
+        "include_summary": true
+      }
+    },
+    "quality_assurance": {
+      "content_validation": {
+        "enabled": true,
+        "min_word_count": 50,
+        "max_word_count": 5000,
+        "language_detection": true,
+        "spam_detection": true
+      },
+      "source_validation": {
+        "enabled": true,
+        "verify_ssl": true,
+        "check_reputation": true,
+        "validate_content_type": true
+      },
+      "data_integrity": {
+        "enabled": true,
+        "checksum_validation": true,
+        "duplicate_detection": true,
+        "consistency_checks": true
+      }
+    },
+    "reporting": {
+      "daily_summary": {
+        "enabled": true,
+        "include_metrics": true,
+        "include_trends": true,
+        "include_alerts": true
+      },
+      "weekly_analysis": {
+        "enabled": true,
+        "trend_analysis": true,
+        "comparative_analysis": true,
+        "performance_review": true
+      },
+      "monthly_report": {
+        "enabled": true,
+        "strategic_overview": true,
+        "regional_comparison": true,
+        "recommendation_engine": true
+      }
+    }
+  }
+}
