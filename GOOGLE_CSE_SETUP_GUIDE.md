@@ -1,129 +1,99 @@
 # Google Custom Search Engine Setup Guide
 
-## ✅ Step 1: API Key Ready
-Your Google API key is configured: `AIzaSyB8yvuzAdDx1GDsdRp4ulReaC7Y9BTEBdw`
+## Security prerequisite
 
-## 🎯 Step 2: Create Custom Search Engine
+The previously committed Google API key must be treated as compromised. Rotate or revoke it in Google Cloud before configuring this integration. Never place an API key in this repository, documentation, shell history, screenshots, or issue comments.
 
-### A. Go to Google CSE Control Panel
-1. Visit: https://cse.google.com/cse/
-2. Click "Add" or "New Search Engine"
+Use one of these secure locations:
 
-### B. Configure Your Search Engine
+- A local `.env` file copied from `.env.template` and excluded by `.gitignore`
+- A user/process environment variable named `GOOGLE_API_KEY`
+- GitHub Actions or Codespaces secrets for hosted workflows
+- An approved secret manager for production
 
-**Basic Settings:**
-- **Sites to search**: Leave blank to search the entire web
-- **Name**: "Geopolitical Image Search"
-- **Language**: English
+## Step 1: Create or select a restricted API key
 
-**Advanced Settings:**
-- **Search Engine ID**: Copy this after creation (needed for GOOGLE_CSE_ID)
-- **Search Type**: 
-  - ✅ **Enable "Image Search"** (CRITICAL)
-  - Enable "Safe Search" (Recommended)
+In Google Cloud Console:
 
-### C. Customize for Image Search
-1. After creation, click "Control Panel"
-2. Go to "Setup" → "Basics"
-3. Under "Image Search", select **"ON"**
-4. Under "Search the entire web", select **"ON"**
+1. Select the intended active project.
+2. Create a new key only after the exposed key has been revoked or confirmed unusable.
+3. Restrict the key to the Custom Search JSON API.
+4. Add application restrictions appropriate to the deployment environment.
+5. Review quota and billing alerts.
 
-### D. Get Your Search Engine ID
-1. In Control Panel → "Setup" → "Basics"
-2. Copy the **Search Engine ID** (format: `abc123:def456`)
-3. Add it to your `.env` file as `GOOGLE_CSE_ID`
+Do not reuse the exposed key.
 
-## 🔧 Step 3: Update Configuration
+## Step 2: Create the Custom Search Engine
 
-Edit `c:\Users\tjd20.LAPTOP-PCMC2SUO\news\.env`:
-```
-GOOGLE_API_KEY=AIzaSyB8yvuzAdDx1GDsdRp4ulReaC7Y9BTEBdw
-GOOGLE_CSE_ID=YOUR_SEARCH_ENGINE_ID_HERE
-```
+1. Visit the Google Programmable Search Engine control panel.
+2. Create a search engine named `Geopolitical Image Search`.
+3. Enable image search.
+4. Enable whole-web search only when consistent with the intended use and policy.
+5. Copy the Search Engine ID.
 
-## 🧪 Step 4: Test Integration
+## Step 3: Configure the local environment
 
-### Quick Test Script:
+Copy the template and edit the local file only:
+
 ```powershell
-# Test Google Images API integration
-curl -X POST http://localhost:3007/mcp -H "Content-Type: application/json" -d '{
-    "method": "tools/call",
-    "params": {
-        "name": "search_related_images",
-        "keywords": "African politics election democracy",
-        "sources": ["google_images"],
-        "region": "african"
-    }
-}'
+Copy-Item .env.template .env
+notepad .env
 ```
 
-### Enhanced Test:
+Set these values locally:
+
+```text
+GOOGLE_API_KEY=YOUR_ROTATED_AND_RESTRICTED_KEY
+GOOGLE_CSE_ID=YOUR_SEARCH_ENGINE_ID
+```
+
+Confirm that `.env` remains ignored:
+
 ```powershell
-# Test enhanced image scraping with Google API
-curl -X POST http://localhost:3007/api/enhanced-scrape-images -H "Content-Type: application/json" -d '{
-    "strategy": "api_search", 
-    "limit": 3, 
-    "includeRelated": true
-}'
+git check-ignore .env
 ```
 
-## 📊 Expected Results
+The command should report `.env`.
 
-With your API key and CSE ID configured, you should see:
+## Step 4: Test without displaying the key
 
-✅ **Success Response:**
-```json
-{
-  "success": true,
-  "strategy": "api_search",
-  "totalProcessed": 3,
-  "successful": 2,
-  "images": [
-    {
-      "url": "https://example.com/image1.jpg",
-      "title": "African Election Image",
-      "source": "google_images",
-      "thumbnail": "https://example.com/thumb1.jpg"
-    }
-  ]
-}
-```
+Check that configuration loads without printing the credential:
 
-❌ **Error if CSE ID missing:**
-```
-🔑 Google API credentials not configured
-```
-
-## 🚀 Next Steps After Setup
-
-1. **Test Google Integration**: Use the test scripts above
-2. **Add More APIs**: Get Bing and News API keys for full integration
-3. **Production Deployment**: Configure rate limits and monitoring
-
-## 📈 API Quota Information
-
-**Free Tier Limits:**
-- **100 search queries per day**
-- **10,000 queries per month** (with billing enabled)
-
-**Usage Monitoring:**
-- Monitor usage at: https://console.developers.google.com/apis/dashboard
-- Track quota: Google Custom Search API → Quotas
-
-## 🔍 Troubleshooting
-
-**Common Issues:**
-1. **"Image search not enabled"** → Enable image search in CSE settings
-2. **"Invalid API key"** → Verify key in Google Console
-3. **"Search engine not found"** → Check CSE ID format
-
-**Verification Commands:**
 ```powershell
-# Check if .env file is loaded
-node -e "require('dotenv').config(); console.log('API Key:', process.env.GOOGLE_API_KEY ? 'Loaded' : 'Missing');"
-
-# Test API key directly
-curl "https://www.googleapis.com/customsearch/v1?key=AIzaSyB8yvuzAdDx1GDsdRp4ulReaC7Y9BTEBdw&cx=YOUR_CSE_ID&q=test"
+node -e "require('dotenv').config(); console.log('API key:', process.env.GOOGLE_API_KEY ? 'Loaded' : 'Missing'); console.log('CSE ID:', process.env.GOOGLE_CSE_ID ? 'Loaded' : 'Missing');"
 ```
 
-Complete these steps and your Google Images integration will be fully operational!
+Run the integration tests:
+
+```powershell
+powershell -File test-comprehensive-integration.ps1
+```
+
+For a direct API test, reference environment variables rather than placing secrets in the command:
+
+```powershell
+$uri = "https://www.googleapis.com/customsearch/v1?key=$env:GOOGLE_API_KEY&cx=$env:GOOGLE_CSE_ID&q=test"
+Invoke-RestMethod -Uri $uri -Method Get
+```
+
+Be aware that command history and process inspection may expose command-line arguments. Prefer application-level tests that read environment variables internally.
+
+## Step 5: Production controls
+
+- Keep `.env` untracked.
+- Restrict the key to the minimum API and application scope.
+- Enable quota and billing alerts.
+- Rotate keys on a defined schedule and after any suspected exposure.
+- Use secret scanning and pre-commit checks.
+- Do not log complete request URLs when they contain credentials.
+
+## Incident response
+
+When a credential is committed:
+
+1. Revoke or rotate it first.
+2. Remove it from every current branch and tag.
+3. Search the repository for additional copies.
+4. Assess Git history and cached forks.
+5. Replace local and hosted workflow configuration.
+6. Document the incident without reproducing the secret.
